@@ -520,6 +520,40 @@ export default function FootballPlayCreator() {
     setPlayers([]); setLines([]); history.current = [];
   };
 
+  const exportPlays = () => {
+    const json = JSON.stringify(plays, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "plays.json"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importPlays = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const imported = JSON.parse(ev.target.result);
+          if (!Array.isArray(imported)) { alert("Invalid plays.json file."); return; }
+          // Merge: skip any whose id already exists
+          setPlays(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const fresh = imported.filter(p => !existingIds.has(p.id));
+            return [...prev, ...fresh];
+          });
+        } catch (_) { alert("Could not read file — make sure it's a valid plays.json."); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
   const switchTool = id => {
     if (id !== "curved") cancelCurve();
     is.current.eraseHoverId = null;
@@ -709,6 +743,16 @@ export default function FootballPlayCreator() {
               style={{ width: "100%", padding: "9px", background: plays.length > 0 ? "#9e6a03" : "#21262d", color: plays.length > 0 ? "#fbbf24" : td, border: "none", borderRadius: "6px", cursor: plays.length > 0 ? "pointer" : "default", fontWeight: "bold", fontSize: "13px", letterSpacing: "1px", fontFamily: "inherit" }}>
               🖨 PRINT PREVIEW
             </button>
+            <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+              <button onClick={exportPlays} disabled={plays.length === 0}
+                style={{ flex: 1, padding: "7px 4px", background: plays.length > 0 ? "#1f3d4a" : "#21262d", color: plays.length > 0 ? "#7dd3fc" : td, border: `1px solid ${plays.length > 0 ? "#0ea5e9" : bdr}`, borderRadius: "6px", cursor: plays.length > 0 ? "pointer" : "default", fontWeight: "bold", fontSize: "11px", fontFamily: "inherit" }}>
+                ⬇ EXPORT
+              </button>
+              <button onClick={importPlays}
+                style={{ flex: 1, padding: "7px 4px", background: "#192a19", color: "#4ade80", border: `1px solid ${accent}`, borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "11px", fontFamily: "inherit" }}>
+                ⬆ IMPORT
+              </button>
+            </div>
             {plays.length > 0 && (
               <div style={{ fontSize: "11px", color: tm, textAlign: "center", marginTop: "7px" }}>
                 {plays.length} play{plays.length !== 1 ? "s" : ""} · {Math.ceil(plays.length / ppp)} page{Math.ceil(plays.length / ppp) !== 1 ? "s" : ""}
